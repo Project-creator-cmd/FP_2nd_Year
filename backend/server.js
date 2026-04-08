@@ -23,8 +23,12 @@ app.use(morgan('dev'));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests, please try again later.'
+  max: 5000, // Increased limit significantly for development & normal app flow
+  message: { success: false, message: 'Too many requests, please try again later.' },
+  handler: (req, res, next, options) => {
+    console.warn(`Rate limit exceeded for IP: ${req.ip}`);
+    res.status(options.statusCode).send(options.message);
+  }
 });
 app.use('/api/', limiter);
 

@@ -52,7 +52,7 @@ function ActionModal({ achievement, action, onClose, onDone }) {
   )
 }
 
-export default function FacultyVerify() {
+export default function AdminVerify() {
   const [achievements, setAchievements] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pending')
@@ -62,7 +62,7 @@ export default function FacultyVerify() {
   const fetch = async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/achievements/department', { params: { status: filter || undefined, category: catFilter || undefined } })
+      const { data } = await api.get('/achievements/all', { params: { status: filter || undefined, category: catFilter || undefined } })
       setAchievements(data.achievements)
     } catch { toast.error('Failed to load') }
     finally { setLoading(false) }

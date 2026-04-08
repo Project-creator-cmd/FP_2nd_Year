@@ -31,7 +31,7 @@ export default function AdminAnalytics() {
 
   const { globalStats: g, departmentStats: depts } = overview
 
-  const deptPlacementData = depts.map(d => ({ name: d.department.split(' ')[0], students: d.students, ready: d.placementReady }))
+  const deptPlacementData = depts.map(d => ({ name: d.department.split(' ')[0], students: d.students, faculty: d.faculty, ready: d.placementReady }))
 
   const catData = deptDetail?.byCategory?.map(c => ({ name: c._id, value: c.count })) || []
   const levelData = deptDetail?.byLevel?.map(l => ({ name: l._id, value: l.count })) || []
@@ -40,14 +40,15 @@ export default function AdminAnalytics() {
     <div className="space-y-6 animate-fade-in">
       <h1 className="page-title">System Analytics</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label:'Total Students', value:g.totalStudents, icon:Users, bg:'bg-blue-50', color:'text-blue-600' },
+          { label:'Total Faculty', value:g.totalFaculty, icon:Users, bg:'bg-indigo-50', color:'text-indigo-600' },
           { label:'Total Achievements', value:g.totalAchievements, icon:Trophy, bg:'bg-purple-50', color:'text-purple-600' },
           { label:'Verified', value:g.verified, icon:CheckCircle, bg:'bg-green-50', color:'text-green-600' },
           { label:'Placement Ready', value:g.placementReady, icon:TrendingUp, bg:'bg-brand-50', color:'text-brand-600' },
         ].map(({ label, value, icon: Icon, bg, color }) => (
-          <div key={label} className="stat-card">
+          <div key={label} className="stat-card p-4 bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-2`}>
               <Icon className={`w-5 h-5 ${color}`}/>
             </div>
@@ -58,16 +59,17 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Dept comparison */}
-      <div className="card p-5">
-        <h2 className="section-title mb-4">Students vs Placement Ready by Department</h2>
+      <div className="card p-5 bg-white rounded-xl shadow-sm border border-slate-100">
+        <h2 className="section-title mb-4 font-bold text-lg text-slate-800">Students, Faculty vs Placement Ready</h2>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={deptPlacementData} barGap={4}>
             <XAxis dataKey="name" tick={{fontSize:11}} tickLine={false} axisLine={false}/>
             <YAxis tick={{fontSize:11}} tickLine={false} axisLine={false}/>
             <Tooltip contentStyle={{borderRadius:12,border:'none',boxShadow:'0 4px 24px rgba(0,0,0,0.08)',fontSize:13}}/>
             <Legend wrapperStyle={{fontSize:12}}/>
-            <Bar dataKey="students" name="Total Students" fill="#e0e7ff" radius={[4,4,0,0]} barSize={20}/>
-            <Bar dataKey="ready" name="Placement Ready" fill="#6366f1" radius={[4,4,0,0]} barSize={20}/>
+            <Bar dataKey="students" name="Total Students" fill="#6366f1" radius={[4,4,0,0]} barSize={20}/>
+            <Bar dataKey="faculty" name="Total Faculty" fill="#10b981" radius={[4,4,0,0]} barSize={20}/>
+            <Bar dataKey="ready" name="Placement Ready" fill="#f59e0b" radius={[4,4,0,0]} barSize={20}/>
           </BarChart>
         </ResponsiveContainer>
       </div>

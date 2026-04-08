@@ -17,12 +17,14 @@ const NAV = {
   ],
   faculty: [
     { to: '/faculty', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/faculty/achievements', label: 'My Achievements', icon: Trophy },
     { to: '/faculty/verify', label: 'Verify Achievements', icon: CheckSquare },
     { to: '/faculty/relaxation', label: 'Relaxation Requests', icon: ClipboardList },
     { to: '/faculty/analytics', label: 'Analytics', icon: BarChart2 },
   ],
   admin: [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/admin/verify', label: 'Verify Achievements', icon: CheckSquare },
     { to: '/admin/users', label: 'Manage Users', icon: Users },
     { to: '/admin/scoring', label: 'Scoring Rules', icon: Settings },
     { to: '/admin/relaxation', label: 'Relaxation Approvals', icon: ClipboardList },
@@ -47,7 +49,12 @@ export default function Layout() {
   const [open, setOpen] = useState(false)
   const links = NAV[user?.role] || []
 
-  const handleLogout = () => { logout(); navigate('/login') }
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      logout();
+      navigate('/login');
+    }
+  }
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
 
   return (
@@ -92,9 +99,6 @@ export default function Layout() {
                 {user?.role}
               </span>
             </div>
-            <button onClick={handleLogout} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-lg" title="Logout">
-              <LogOut className="w-4 h-4 text-red-500" />
-            </button>
           </div>
         </div>
       </aside>
@@ -109,13 +113,22 @@ export default function Layout() {
           <div className="hidden lg:block">
             <p className="text-sm text-slate-500">Welcome back, <span className="font-semibold text-slate-800">{user?.name?.split(' ')[0]}</span></p>
           </div>
-          <div className="flex items-center gap-2 ml-auto">
-            {user?.role === 'student' && (
-              <div className="hidden sm:flex items-center gap-2 bg-brand-50 px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-4 ml-auto">
+            <button className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
+            {(user?.role === 'student' || user?.role === 'faculty') && (
+              <div className="hidden sm:flex items-center gap-2 bg-brand-50 border border-brand-100 px-3 py-1.5 rounded-xl shadow-sm">
                 <Award className="w-4 h-4 text-brand-600" />
                 <span className="text-sm font-bold text-brand-700">{user?.totalScore || 0} pts</span>
               </div>
             )}
+            <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-colors" title="Logout">
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </header>
 

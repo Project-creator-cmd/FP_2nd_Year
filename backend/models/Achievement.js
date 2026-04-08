@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const achievementSchema = new mongoose.Schema({
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userRole: { type: String, enum: ['student', 'faculty'], required: true },
   department: { type: String, required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
@@ -24,7 +25,7 @@ const achievementSchema = new mongoose.Schema({
   remarks: { type: String }
 }, { timestamps: true });
 
-achievementSchema.index({ student: 1, status: 1 });
+achievementSchema.index({ userId: 1, status: 1 });
 achievementSchema.index({ department: 1, status: 1 });
 
 module.exports = mongoose.model('Achievement', achievementSchema);

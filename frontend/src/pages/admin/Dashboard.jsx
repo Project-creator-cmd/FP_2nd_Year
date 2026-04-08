@@ -34,6 +34,7 @@ export default function AdminDashboard() {
         {[
           { label: 'Total Users', value: g.totalUsers, icon: Users, bg:'bg-blue-50', color:'text-blue-600' },
           { label: 'Total Students', value: g.totalStudents, icon: Users, bg:'bg-brand-50', color:'text-brand-600' },
+          { label: 'Total Faculty', value: g.totalFaculty, icon: Building, bg:'bg-indigo-50', color:'text-indigo-600' },
           { label: 'Verified Achievements', value: g.verified, icon: CheckCircle, bg:'bg-green-50', color:'text-green-600' },
           { label: 'Pending Achievements', value: g.pending, icon: Clock, bg:'bg-amber-50', color:'text-amber-600' },
           { label: 'Placement Ready', value: g.placementReady, icon: TrendingUp, bg:'bg-purple-50', color:'text-purple-600' },
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
           <table className="w-full">
             <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
               <tr>
-                {['Department','Students','Achievements','Placement Ready','Rate'].map(h=>(
+                {['Department','Students','Faculty','Achievements','Placement Ready','Rate'].map(h=>(
                   <th key={h} className="text-left px-5 py-3 font-semibold">{h}</th>
                 ))}
               </tr>
@@ -95,6 +96,7 @@ export default function AdminDashboard() {
                 <tr key={d.department} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3 font-semibold text-slate-800">{d.department}</td>
                   <td className="px-5 py-3 text-slate-600">{d.students}</td>
+                  <td className="px-5 py-3 text-slate-600">{d.faculty}</td>
                   <td className="px-5 py-3 text-slate-600">{d.achievements}</td>
                   <td className="px-5 py-3 text-green-700 font-semibold">{d.placementReady}</td>
                   <td className="px-5 py-3">

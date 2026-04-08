@@ -10,16 +10,19 @@ import StudentLeaderboard from './pages/student/Leaderboard'
 import StudentRelaxation from './pages/student/Relaxation'
 import StudentProfile from './pages/student/Profile'
 import FacultyDashboard from './pages/faculty/Dashboard'
+import FacultyAchievements from './pages/faculty/Achievements'
 import FacultyVerify from './pages/faculty/Verify'
 import FacultyRelaxation from './pages/faculty/Relaxation'
 import FacultyAnalytics from './pages/faculty/Analytics'
 import AdminDashboard from './pages/admin/Dashboard'
+import AdminVerify from './pages/admin/Verify'
 import AdminUsers from './pages/admin/Users'
 import AdminScoring from './pages/admin/Scoring'
 import AdminRelaxation from './pages/admin/Relaxation'
 import AdminAnalytics from './pages/admin/Analytics'
 import PlacementDashboard from './pages/placement/Dashboard'
 import PlacementStudents from './pages/placement/Students'
+import LandingPage from './pages/LandingPage'
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth()
@@ -44,7 +47,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={<RoleRedirect />} />
+          <Route path="/" element={<LandingPage />} />
 
           {/* Student */}
           <Route path="/student" element={<ProtectedRoute roles={['student']}><Layout /></ProtectedRoute>}>
@@ -58,6 +61,7 @@ export default function App() {
           {/* Faculty */}
           <Route path="/faculty" element={<ProtectedRoute roles={['faculty']}><Layout /></ProtectedRoute>}>
             <Route index element={<FacultyDashboard />} />
+            <Route path="achievements" element={<FacultyAchievements />} />
             <Route path="verify" element={<FacultyVerify />} />
             <Route path="relaxation" element={<FacultyRelaxation />} />
             <Route path="analytics" element={<FacultyAnalytics />} />
@@ -66,6 +70,7 @@ export default function App() {
           {/* Admin */}
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout /></ProtectedRoute>}>
             <Route index element={<AdminDashboard />} />
+            <Route path="verify" element={<AdminVerify />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="scoring" element={<AdminScoring />} />
             <Route path="relaxation" element={<AdminRelaxation />} />

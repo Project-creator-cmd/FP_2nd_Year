@@ -21,7 +21,15 @@ export function AuthProvider({ children }) {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchMe() }, [fetchMe])
+  useEffect(() => { 
+    fetchMe() 
+    
+    const handleUnauthorized = () => {
+      logout()
+    }
+    window.addEventListener('auth:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized)
+  }, [fetchMe])
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })

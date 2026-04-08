@@ -14,18 +14,24 @@ const calculateScore = async (achievement) => {
   return rule ? rule.points : 0;
 };
 
-const updateStudentTotalScore = async (studentId) => {
-  const achievements = await Achievement.find({ student: studentId, status: 'verified' });
+const updateUserTotalScore = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) return;
+  const achievements = await Achievement.find({ userId, status: 'verified' });
   const total = achievements.reduce((sum, a) => sum + (a.score || 0), 0);
-  const placementReady = total >= 100;
-  await User.findByIdAndUpdate(studentId, { totalScore: total, placementReady });
+  user.totalScore = total;
+  if (user.role === 'student') {
+    user.placementReady = total >= 100;
+  }
+  await user.save();
 };
 
 exports.upload = async (req, res) => {
   try {
     const { title, description, category, level, position, date, organizingBody } = req.body;
     const achievementData = {
-      student: req.user.id,
+      userId: req.user.id,
+      userRole: req.user.role,
       department: req.user.department,
       title, description, category, level, position,
       date: new Date(date),
@@ -44,7 +50,7 @@ exports.upload = async (req, res) => {
 
 exports.getMyAchievements = async (req, res) => {
   try {
-    const achievements = await Achievement.find({ student: req.user.id })
+    const achievements = await Achievement.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
       .populate('verifiedBy', 'name');
     res.json({ success: true, achievements });
@@ -56,11 +62,14 @@ exports.getMyAchievements = async (req, res) => {
 exports.getDepartmentAchievements = async (req, res) => {
   try {
     const filter = { department: req.user.department };
+    if (req.user.role === 'faculty') {
+      filter.userRole = 'student';
+    }
     if (req.query.status) filter.status = req.query.status;
     if (req.query.category) filter.category = req.query.category;
     const achievements = await Achievement.find(filter)
       .sort({ createdAt: -1 })
-      .populate('student', 'name rollNumber year section')
+      .populate('userId', 'name role rollNumber year section')
       .populate('verifiedBy', 'name');
     res.json({ success: true, achievements });
   } catch (err) {
@@ -75,7 +84,7 @@ exports.getAll = async (req, res) => {
     if (req.query.status) filter.status = req.query.status;
     const achievements = await Achievement.find(filter)
       .sort({ createdAt: -1 })
-      .populate('student', 'name rollNumber department year')
+      .populate('userId', 'name role rollNumber department year')
       .populate('verifiedBy', 'name');
     res.json({ success: true, achievements });
   } catch (err) {
@@ -92,6 +101,9 @@ exports.verify = async (req, res) => {
     if (achievement.department !== req.user.department && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
+    if (achievement.userRole === 'faculty' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admins can verify faculty achievements' });
+    }
     if (action === 'verify') {
       achievement.status = 'verified';
       achievement.verifiedBy = req.user.id;
@@ -105,7 +117,7 @@ exports.verify = async (req, res) => {
       achievement.verifiedAt = new Date();
     }
     await achievement.save();
-    if (action === 'verify') await updateStudentTotalScore(achievement.student);
+    if (action === 'verify') await updateUserTotalScore(achievement.userId);
     res.json({ success: true, achievement });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -116,14 +128,14 @@ exports.deleteAchievement = async (req, res) => {
   try {
     const achievement = await Achievement.findById(req.params.id);
     if (!achievement) return res.status(404).json({ success: false, message: 'Not found' });
-    if (achievement.student.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (achievement.userId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     if (achievement.certificatePublicId) {
       await cloudinary.uploader.destroy(achievement.certificatePublicId);
     }
     await achievement.deleteOne();
-    await updateStudentTotalScore(achievement.student);
+    await updateUserTotalScore(achievement.userId);
     res.json({ success: true, message: 'Achievement deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

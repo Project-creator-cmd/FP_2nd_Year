@@ -70,17 +70,19 @@ exports.getAdminOverview = async (req, res) => {
   try {
     const departments = await User.distinct('department');
     const stats = await Promise.all(departments.map(async dept => {
-      const [students, achievements, placementReady] = await Promise.all([
+      const [students, faculty, achievements, placementReady] = await Promise.all([
         User.countDocuments({ role: 'student', department: dept }),
+        User.countDocuments({ role: 'faculty', department: dept }),
         Achievement.countDocuments({ department: dept, status: 'verified' }),
         User.countDocuments({ role: 'student', department: dept, placementReady: true })
       ]);
-      return { department: dept, students, achievements, placementReady };
+      return { department: dept, students, faculty, achievements, placementReady };
     }));
 
     const globalStats = {
       totalUsers: await User.countDocuments(),
       totalStudents: await User.countDocuments({ role: 'student' }),
+      totalFaculty: await User.countDocuments({ role: 'faculty' }),
       totalAchievements: await Achievement.countDocuments(),
       verified: await Achievement.countDocuments({ status: 'verified' }),
       pending: await Achievement.countDocuments({ status: 'pending' }),
