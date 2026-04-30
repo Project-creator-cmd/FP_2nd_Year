@@ -28,4 +28,29 @@ const upload = multer({
   }
 });
 
-module.exports = { cloudinary, upload };
+// Raw file upload for event participant lists (PDF, xlsx)
+const rawStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: 'acadex/events',
+    resource_type: 'raw',
+    public_id: `participants_${Date.now()}`,
+  })
+});
+
+const uploadRaw = multer({
+  storage: rawStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv'
+    ];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only PDF, Excel, or CSV files are allowed'), false);
+  }
+});
+
+module.exports = { cloudinary, upload, uploadRaw };

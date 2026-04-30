@@ -1,60 +1,78 @@
 import axios from 'axios'
 
-const MAX_RETRIES = 2;
-
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  timeout: 30000
+  baseURL:         import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  timeout:         30000,
+  withCredentials: true, // send HTTP-only refresh cookie on every request
 })
 
+// Attach access token from localStorage
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('acadex_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
-  
-  // Debug Log
-  if (import.meta.env.DEV) {
-    console.log(`[API Request] ${config.method.toUpperCase()} ${config.url}`);
-  }
   return config
 })
 
+let isRefreshing = false
+let failedQueue  = []
+
+function processQueue(error, token = null) {
+  failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token))
+  failedQueue = []
+}
+
 api.interceptors.response.use(
-  res => {
-    if (import.meta.env.DEV) {
-      console.log(`[API Success] ${res.config.url}`, res.data);
-    }
-    return res;
-  },
+  res => res,
   async err => {
-    const originalRequest = err.config;
+    const original = err.config
 
-    // Add Fallback/Retry Logic for Network Errors or 5xx Server Errors (not 4xx errors)
-    if (!originalRequest || ((!err.response || err.response.status >= 500) && !originalRequest._retryCount)) {
-      originalRequest._retryCount = 0;
-    }
-    
-    if (originalRequest && originalRequest._retryCount < MAX_RETRIES && (!err.response || err.response.status >= 500 || err.response.status === 429)) {
-      originalRequest._retryCount += 1;
-      console.warn(`[API Retry] Retrying request ${originalRequest.url} (${originalRequest._retryCount}/${MAX_RETRIES})`);
-      // Wait for a backoff duration before retrying
-      await new Promise(resolve => setTimeout(resolve, 1000 * originalRequest._retryCount));
-      return api(originalRequest);
-    }
+    // Attempt silent token refresh on 401 (but not on the refresh endpoint itself)
+    if (
+      err.response?.status === 401 &&
+      !original._retry &&
+      !original.url?.includes('/auth/refresh') &&
+      !original.url?.includes('/auth/login')
+    ) {
+      if (isRefreshing) {
+        // Queue requests while refresh is in progress
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then(token => {
+          original.headers.Authorization = `Bearer ${token}`
+          return api(original)
+        })
+      }
 
-    // Standard Error Handling
-    if (err.response) {
-      console.error(`[API Error] ${err.response.status} at ${originalRequest?.url}`, err.response.data);
-      
-      if (err.response.status === 401 || err.response.status === 403) {
-        // Unauthorized or Forbidden - token expired or invalid
+      original._retry  = true
+      isRefreshing     = true
+
+      try {
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+        const newToken = data.token
+        localStorage.setItem('acadex_token', newToken)
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`
+        processQueue(null, newToken)
+        original.headers.Authorization = `Bearer ${newToken}`
+        return api(original)
+      } catch (refreshErr) {
+        processQueue(refreshErr, null)
+        // Refresh failed — clear session and redirect to login
         localStorage.removeItem('acadex_token')
         localStorage.removeItem('acadex_user')
-        if (window.location.pathname !== '/login') {
-          window.dispatchEvent(new Event('auth:unauthorized'))
-        }
+        window.dispatchEvent(new Event('auth:unauthorized'))
+        return Promise.reject(refreshErr)
+      } finally {
+        isRefreshing = false
       }
-    } else {
-      console.error(`[API Network Error] at ${originalRequest?.url}:`, err.message);
+    }
+
+    // 403 — forbidden (wrong role)
+    if (err.response?.status === 403) {
+      console.warn('[API] 403 Forbidden:', original?.url)
     }
 
     return Promise.reject(err)

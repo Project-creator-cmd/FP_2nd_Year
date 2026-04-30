@@ -22,7 +22,11 @@ const achievementSchema = new mongoose.Schema({
   verifiedAt: { type: Date },
   rejectionReason: { type: String },
   score: { type: Number, default: 0 },
-  remarks: { type: String }
+  remarks: { type: String },
+  eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: null },
+  verifiedByRole: { type: String, enum: ['faculty', 'dept_head', 'admin'], default: null },
+  // auto-matched = roll number found in event participant list; manual-review = not found
+  matchStatus: { type: String, enum: ['auto-matched', 'manual-review', null], default: null }
 }, { timestamps: true });
 
 achievementSchema.index({ userId: 1, status: 1 });

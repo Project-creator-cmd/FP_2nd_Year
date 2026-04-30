@@ -1,26 +1,49 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import api from '../../utils/api'
-import { CheckSquare, Clock, Users, BarChart2, TrendingUp } from 'lucide-react'
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
+import api from "../../utils/api"
+import { CheckSquare, Clock, Users, TrendingUp, Calendar, Download, ExternalLink } from "lucide-react"
+
+function fmtDate(d) {
+  if (!d) return "-"
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+}
+
+function liveStatus(e) {
+  return e.endDate && new Date() > new Date(e.endDate) ? "closed" : "active"
+}
+
+const CATEGORY_COLORS = {
+  academic: "bg-blue-50 text-blue-700", technical: "bg-brand-50 text-brand-700",
+  sports: "bg-emerald-50 text-emerald-700", cultural: "bg-pink-50 text-pink-700",
+  internship: "bg-orange-50 text-orange-700", certification: "bg-purple-50 text-purple-700",
+  research: "bg-teal-50 text-teal-700", other: "bg-slate-50 text-slate-600",
+}
 
 export default function FacultyDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState(null)
   const [pending, setPending] = useState([])
+  const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
-      api.get('/analytics/department'),
-      api.get('/achievements/department', { params: { status: 'pending' } })
-    ]).then(([a, ach]) => {
+      api.get("/analytics/department"),
+      api.get("/achievements/department", { params: { status: "pending" } }),
+      api.get("/events/department").catch(() => ({ data: { events: [] } })),
+    ]).then(([a, ach, ev]) => {
       setStats(a.data.data)
-      setPending(ach.data.achievements.slice(0, 5))
+      setPending((ach.data.achievements || []).slice(0, 5))
+      setEvents(ev.data.events || [])
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"/></div>
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 
   const s = stats?.summary || {}
 
@@ -31,12 +54,13 @@ export default function FacultyDashboard() {
         <p className="text-slate-500 text-sm mt-1">{user?.department} Department</p>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Students', value: s.totalStudents||0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Pending Verify', value: s.pendingAchievements||0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'Verified', value: s.verifiedAchievements||0, icon: CheckSquare, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Placement Ready', value: s.placementReady||0, icon: TrendingUp, color: 'text-brand-600', bg: 'bg-brand-50' },
+          { label: "Total Students",  value: s.totalStudents || 0,       icon: Users,       color: "text-blue-600",  bg: "bg-blue-50" },
+          { label: "Pending Verify",  value: s.pendingAchievements || 0, icon: Clock,       color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Verified",        value: s.verifiedAchievements || 0,icon: CheckSquare, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Placement Ready", value: s.placementReady || 0,      icon: TrendingUp,  color: "text-brand-600", bg: "bg-brand-50" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="stat-card">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-2`}>
@@ -65,11 +89,84 @@ export default function FacultyDashboard() {
               <div key={a._id} className="py-3 flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-slate-800 text-sm">{a.title}</p>
-                  <p className="text-xs text-slate-500">{a.student?.name} · {a.student?.rollNumber} · <span className="capitalize">{a.category} · {a.level}</span></p>
+                  <p className="text-xs text-slate-500">{a.userId?.name} - <span className="capitalize">{a.category} - {a.level}</span></p>
                 </div>
                 <span className="badge-pending">Pending</span>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Department Events */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="section-title flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-sky-500" /> Department Events
+          </h2>
+          <span className="text-xs text-slate-400 font-medium">{events.length} total</span>
+        </div>
+        {events.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No events uploaded yet</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  {["Event Title", "Category", "Level", "Dates", "Status", "Organizer", "Participants"].map(h => (
+                    <th key={h} className="th whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {events.map(e => {
+                  const status = liveStatus(e)
+                  return (
+                    <tr key={e._id} className="table-row-hover">
+                      <td className="td">
+                        <div>
+                          <p className="font-semibold text-slate-800 text-sm">{e.title}</p>
+                          {e.organizingBody && <p className="text-xs text-slate-400">{e.organizingBody}</p>}
+                          {e.linkedAchievements > 0 && (
+                            <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-md">
+                              {e.linkedAchievements} linked achievement{e.linkedAchievements !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="td">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-md capitalize ${CATEGORY_COLORS[e.category] || CATEGORY_COLORS.other}`}>
+                          {e.category}
+                        </span>
+                      </td>
+                      <td className="td text-xs capitalize text-slate-600">{e.level}</td>
+                      <td className="td text-xs text-slate-600 whitespace-nowrap">
+                        {fmtDate(e.startDate)} to {fmtDate(e.endDate)}
+                      </td>
+                      <td className="td">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {status}
+                        </span>
+                      </td>
+                      <td className="td text-xs text-slate-600">{e.organizer?.name || "-"}</td>
+                      <td className="td">
+                        {e.participantListUrl ? (
+                          <a href={e.participantListUrl} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700">
+                            <Download className="w-3.5 h-3.5" /> View
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

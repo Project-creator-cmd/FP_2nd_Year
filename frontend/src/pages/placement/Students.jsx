@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../utils/api'
 import toast from 'react-hot-toast'
-import { UserCheck, Search, Mail, Phone, Award, Trophy, X } from 'lucide-react'
+import { UserCheck, Search, Mail, Phone, Trophy, X, Download } from 'lucide-react'
 
 const DEPARTMENTS = ['','Computer Science','Electronics','Mechanical','Civil','Chemical','Mathematics','Physics']
 
@@ -79,27 +79,53 @@ export default function PlacementStudents() {
   const [yearFilter, setYearFilter] = useState('')
   const [selected, setSelected] = useState(null)
   const [selAchievements, setSelAchievements] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [exporting, setExporting] = useState(false)
+  const LIMIT = 50
 
-  const fetch = async () => {
+  const fetchStudents = async () => {
     setLoading(true)
     try {
-      const params = {}
+      const params = { page, limit: LIMIT }
       if (deptFilter) params.department = deptFilter
       if (yearFilter) params.year = yearFilter
       const { data } = await api.get('/placement', { params })
-      setStudents(data.data)
+      setStudents(data.data || [])
+      setTotal(data.total || 0)
+      setTotalPages(data.pages || 1)
     } catch { toast.error('Failed to load students') }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [deptFilter, yearFilter])
+  useEffect(() => { fetchStudents() }, [deptFilter, yearFilter, page])
+  useEffect(() => { setPage(1) }, [deptFilter, yearFilter])
 
   const handleViewProfile = async (student) => {
     setSelected(student)
     try {
       const { data } = await api.get(`/placement/${student._id}`)
-      setSelAchievements(data.achievements)
+      setSelAchievements(data.achievements || [])
     } catch { setSelAchievements([]) }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const params = {}
+      if (deptFilter) params.department = deptFilter
+      if (yearFilter) params.year = yearFilter
+      const res = await api.get('/placement/export', { params, responseType: 'blob' })
+      const url  = URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href  = url
+      link.download = 'placement_ready.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+      toast.success('Exported successfully!')
+    } catch { toast.error('Export failed') }
+    finally { setExporting(false) }
   }
 
   const filtered = students.filter(s =>
@@ -113,8 +139,11 @@ export default function PlacementStudents() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="page-title">Placement Ready Students</h1>
-          <p className="text-slate-500 text-sm mt-1">{filtered.length} students placement eligible</p>
+          <p className="text-slate-500 text-sm mt-1">{total} students placement eligible</p>
         </div>
+        <button onClick={handleExport} disabled={exporting} className="btn-secondary gap-2 text-sm">
+          <Download className="w-4 h-4" /> {exporting ? 'Exporting...' : 'Export CSV'}
+        </button>
       </div>
 
       {/* Filters */}
@@ -168,7 +197,10 @@ export default function PlacementStudents() {
                     <td className="px-4 py-3 text-sm text-slate-600">{s.department}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">Year {s.year}</td>
                     <td className="px-4 py-3 font-bold text-brand-600">{s.totalScore}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700 font-medium">{s.cgpa || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700 font-medium">
+                      {s.cgpa || '—'}
+                      <span className="ml-1 text-[10px] text-slate-400">(self-reported)</span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{s.achievementCount || 0}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -181,6 +213,15 @@ export default function PlacementStudents() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="btn-secondary text-sm disabled:opacity-40">Previous</button>
+              <span className="text-sm text-slate-500">Page {page} of {totalPages} ({total} total)</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                className="btn-secondary text-sm disabled:opacity-40">Next</button>
+            </div>
+          )}
         </div>
       )}
     </div>

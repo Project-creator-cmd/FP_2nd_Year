@@ -17,7 +17,7 @@ export default function LoginPage() {
     try {
       const user = await login(form.email, form.password)
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
-      const map = { student: '/student', faculty: '/faculty', admin: '/admin', placement: '/placement' }
+      const map = { student: '/student', faculty: '/faculty', admin: '/admin', placement: '/placement', dept_head: '/depthead', event_organizer: '/organizer' }
       navigate(map[user.role] || '/')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed')

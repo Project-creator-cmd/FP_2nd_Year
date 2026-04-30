@@ -4,7 +4,13 @@ const AttendanceRelaxation = require('../models/AttendanceRelaxation');
 
 exports.getDepartmentAnalytics = async (req, res) => {
   try {
-    const dept = req.user.role === 'admin' && req.query.department ? req.query.department : req.user.department;
+    // admin can query any dept; dept_head is always locked to their own
+    let dept;
+    if (req.user.role === 'admin' && req.query.department) {
+      dept = req.query.department;
+    } else {
+      dept = req.user.department;
+    }
 
     const [totalStudents, totalAchievements, verifiedAchievements, pendingAchievements, placementReady] = await Promise.all([
       User.countDocuments({ role: 'student', department: dept }),

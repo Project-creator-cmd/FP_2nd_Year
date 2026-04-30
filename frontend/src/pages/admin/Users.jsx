@@ -1,9 +1,82 @@
 import { useState, useEffect } from 'react'
 import api from '../../utils/api'
 import toast from 'react-hot-toast'
-import { Users, Search, ToggleLeft, ToggleRight, Trash2, Filter } from 'lucide-react'
+import { Users, Search, ToggleLeft, ToggleRight, Trash2, Plus, X, Loader } from 'lucide-react'
 
-const ROLE_COLORS = { student:'bg-blue-100 text-blue-800', faculty:'bg-purple-100 text-purple-800', admin:'bg-rose-100 text-rose-800', placement:'bg-green-100 text-green-800' }
+const ROLE_COLORS = {
+  student: 'bg-blue-100 text-blue-800', faculty: 'bg-purple-100 text-purple-800',
+  admin: 'bg-rose-100 text-rose-800', placement: 'bg-green-100 text-green-800',
+  dept_head: 'bg-amber-100 text-amber-800', event_organizer: 'bg-sky-100 text-sky-800',
+}
+const DEPARTMENTS = ['Computer Science','Electronics','Mechanical','Civil','Chemical','Mathematics','Physics']
+
+// Modal to create privileged users (admin / dept_head) — only accessible by admin
+function CreatePrivilegedUserModal({ onClose, onSuccess }) {
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'dept_head', department: '' })
+  const [loading, setLoading] = useState(false)
+  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
+
+  const handleSubmit = async e => {
+    e.preventDefault(); setLoading(true)
+    try {
+      await api.post('/auth/create-user', form)
+      toast.success(`${form.role === 'dept_head' ? 'Department Head' : 'Admin'} account created!`)
+      onSuccess(); onClose()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed') }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-soft-xl w-full max-w-md animate-fade-in-scale p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-slate-800">Create Privileged User</h2>
+          <button onClick={onClose} className="btn-icon"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800 font-medium mb-4">
+          Admin and Dept Head accounts can only be created here — not via public registration.
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Full Name</label>
+            <input className="input" placeholder="Full name" value={form.name} onChange={set('name')} required />
+          </div>
+          <div>
+            <label className="label">Email</label>
+            <input className="input" type="email" placeholder="email@college.edu" value={form.email} onChange={set('email')} required />
+          </div>
+          <div>
+            <label className="label">Password (leave blank to auto-generate)</label>
+            <input className="input" type="password" placeholder="Min 6 chars or leave blank" value={form.password} onChange={set('password')} minLength={form.password ? 6 : 0} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Role</label>
+              <select className="input" value={form.role} onChange={set('role')}>
+                <option value="dept_head">Dept Head</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Department</label>
+              <select className="input" value={form.department} onChange={set('department')} required>
+                <option value="">Select...</option>
+                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={loading} className="btn-primary flex-1 gap-2">
+              {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Create User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([])
@@ -11,8 +84,9 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [deptFilter, setDeptFilter] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
 
-  const fetch = async () => {
+  const fetchUsers = async () => {
     try {
       const params = {}
       if (roleFilter) params.role = roleFilter
@@ -23,7 +97,7 @@ export default function AdminUsers() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [roleFilter, deptFilter])
+  useEffect(() => { fetchUsers() }, [roleFilter, deptFilter])
 
   const handleToggle = async (id, current) => {
     try {
@@ -49,11 +123,16 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showCreate && <CreatePrivilegedUserModal onClose={() => setShowCreate(false)} onSuccess={fetchUsers} />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Manage Users</h1>
           <p className="text-slate-500 text-sm mt-1">{users.length} total users</p>
         </div>
+        <button onClick={() => setShowCreate(true)} className="btn-primary gap-2 text-sm">
+          <Plus className="w-4 h-4" /> Create Privileged User
+        </button>
       </div>
 
       {/* Filters */}
@@ -64,7 +143,7 @@ export default function AdminUsers() {
         </div>
         <select className="input w-36" value={roleFilter} onChange={e=>setRoleFilter(e.target.value)}>
           <option value="">All Roles</option>
-          {['student','faculty','admin','placement'].map(r=><option key={r} value={r} className="capitalize">{r}</option>)}
+          {['student','faculty','admin','placement','dept_head','event_organizer'].map(r=><option key={r} value={r} className="capitalize">{r}</option>)}
         </select>
         <select className="input w-44" value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}>
           <option value="">All Departments</option>

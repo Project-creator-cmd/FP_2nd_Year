@@ -112,6 +112,12 @@ export default function FacultyVerify() {
                     <h3 className="font-bold text-slate-900">{a.title}</h3>
                     <span className={a.status==='verified'?'badge-verified':a.status==='rejected'?'badge-rejected':'badge-pending'}>{a.status}</span>
                     {a.score > 0 && <span className="text-sm font-bold text-brand-600">{a.score} pts</span>}
+                    {a.matchStatus === 'auto-matched' && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100">Auto-matched</span>
+                    )}
+                    {a.matchStatus === 'manual-review' && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-100">Manual Review</span>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2">
                     <span className="font-semibold text-slate-700">{a.userId?.name} ({a.userRole || a.userId?.role})</span>

@@ -59,7 +59,7 @@ exports.recalculateAll = async (req, res) => {
     }
     const students = await User.find({ role: 'student', department: dept });
     for (const s of students) {
-      const studentAchievements = achievements.filter(a => a.student.toString() === s._id.toString());
+      const studentAchievements = achievements.filter(a => a.userId.toString() === s._id.toString());
       s.totalScore = studentAchievements.reduce((sum, a) => sum + a.score, 0);
       s.placementReady = s.totalScore >= 100;
       await s.save();
